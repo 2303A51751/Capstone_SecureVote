@@ -147,6 +147,10 @@ EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 465))
 DEMO_MODE = os.environ.get('DEMO_MODE', 'True').lower() in ('true', '1', 'yes')
 
+# HTTP Email APIs (Bypasses Render/Cloud Free Tier SMTP port 465/587 firewall blocks)
+BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '').strip()
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '').strip()
+
 # Blockchain Configuration
 TRANSACTIONS_PER_BLOCK = int(os.environ.get('TRANSACTIONS_PER_BLOCK', 1))
 

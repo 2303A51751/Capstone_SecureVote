@@ -1,4 +1,7 @@
 import smtplib
+import urllib.request
+import urllib.error
+import json
 from email.message import EmailMessage
 from django.conf import settings
 from django.utils import timezone
@@ -13,12 +16,156 @@ from Crypto.Signature import DSS
 
 logger = logging.getLogger(__name__)
 
+def _extract_email_payloads(msg):
+    """
+    Extracts recipient, subject, text, and html payloads from an EmailMessage.
+    """
+    subject = str(msg.get('Subject', 'SRU Blockchain E-Voting'))
+    recipient = str(msg.get('To', ''))
+    
+    html_content = None
+    text_content = ""
+    
+    if msg.is_multipart():
+        for part in msg.walk():
+            ctype = part.get_content_type()
+            if ctype == 'text/html':
+                try:
+                    html_content = part.get_content()
+                except Exception:
+                    html_content = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+            elif ctype == 'text/plain':
+                try:
+                    text_content = part.get_content()
+                except Exception:
+                    text_content = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+    else:
+        try:
+            text_content = msg.get_content()
+        except Exception:
+            text_content = str(msg.get_payload())
+        
+    return recipient, subject, text_content, html_content
+
+def _send_brevo_api(email_to, subject, text_content, html_content, sender_email, sender_name="SRU E-Voting"):
+    """
+    Sends email via Brevo REST API over standard HTTPS (Port 443).
+    Bypasses Render / Railway free tier SMTP firewall restrictions.
+    """
+    api_key = getattr(settings, 'BREVO_API_KEY', '').strip()
+    if not api_key:
+        return False, "BREVO_API_KEY not configured"
+    
+    url = "https://api.brevo.com/v3/smtp/email"
+    sender_clean = sender_email if sender_email and '@' in sender_email else 'noreply@sru.edu.in'
+    
+    payload = {
+        "sender": {"name": sender_name, "email": sender_clean},
+        "to": [{"email": email_to}],
+        "subject": subject,
+    }
+    if html_content:
+        payload["htmlContent"] = html_content
+    if text_content:
+        payload["textContent"] = text_content
+        
+    data = json.dumps(payload).encode('utf-8')
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={
+            "accept": "application/json",
+            "api-key": api_key,
+            "content-type": "application/json",
+            "User-Agent": "SRU-Blockchain-Voting/1.0"
+        },
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as response:
+            return True, None
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode('utf-8', errors='ignore')
+        logger.error(f"Brevo API error: {e.code} {err_body}")
+        return False, f"Brevo API error {e.code}: {err_body}"
+    except Exception as e:
+        logger.error(f"Brevo connection error: {e}")
+        return False, str(e)
+
+def _send_resend_api(email_to, subject, text_content, html_content, sender_email):
+    """
+    Sends email via Resend REST API over standard HTTPS (Port 443).
+    """
+    api_key = getattr(settings, 'RESEND_API_KEY', '').strip()
+    if not api_key:
+        return False, "RESEND_API_KEY not configured"
+    
+    url = "https://api.resend.com/emails"
+    from_field = sender_email if sender_email and '@' in sender_email else "onboarding@resend.dev"
+    if "<" not in from_field and "@" in from_field:
+        from_field = f"SRU E-Voting <{from_field}>"
+
+    payload = {
+        "from": from_field,
+        "to": [email_to],
+        "subject": subject,
+    }
+    if html_content:
+        payload["html"] = html_content
+    if text_content:
+        payload["text"] = text_content
+
+    data = json.dumps(payload).encode('utf-8')
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "User-Agent": "SRU-Blockchain-Voting/1.0"
+        },
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as response:
+            return True, None
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode('utf-8', errors='ignore')
+        logger.error(f"Resend API error: {e.code} {err_body}")
+        return False, f"Resend API error {e.code}: {err_body}"
+    except Exception as e:
+        logger.error(f"Resend connection error: {e}")
+        return False, str(e)
+
 def _dispatch_smtp_message(email_address, email_password, msg):
     """
-    Attempts delivery first on configured port, falling back to alternate port (465 SSL <-> 587 TLS)
-    to bypass restrictive local Wi-Fi/firewall blocks. Automatically strips whitespace and spaces
-    from Google 16-character App Passwords.
+    Dispatches email. First checks for HTTP APIs (Brevo / Resend) over HTTPS Port 443,
+    which bypass Render / Railway free tier SMTP firewall port blocks.
+    Falls back to direct SMTP (port 465 SSL <-> 587 TLS).
     """
+    brevo_key = getattr(settings, 'BREVO_API_KEY', '').strip()
+    resend_key = getattr(settings, 'RESEND_API_KEY', '').strip()
+    
+    recipient, subject, text_content, html_content = _extract_email_payloads(msg)
+    
+    # 1. Try Brevo HTTPS REST API (Port 443 - Never blocked on Render/Railway)
+    if brevo_key:
+        ok, err = _send_brevo_api(recipient, subject, text_content, html_content, email_address)
+        if ok:
+            return True, None
+        logger.warning(f"Brevo API failed ({err}), falling back to next provider...")
+
+    # 2. Try Resend HTTPS REST API (Port 443 - Never blocked on Render/Railway)
+    if resend_key:
+        ok, err = _send_resend_api(recipient, subject, text_content, html_content, email_address)
+        if ok:
+            return True, None
+        logger.warning(f"Resend API failed ({err}), falling back to SMTP...")
+
+    # 3. Direct SMTP (Ports 465 / 587)
+    if not email_address or not email_password:
+        return False, "SMTP credentials (EMAIL_ADDRESS / EMAIL_PASSWORD) not configured."
+
     host = getattr(settings, 'EMAIL_HOST', 'smtp.gmail.com').strip()
     preferred_port = int(getattr(settings, 'EMAIL_PORT', 465))
     clean_password = email_password.strip().replace(' ', '')
@@ -46,27 +193,45 @@ def _dispatch_smtp_message(email_address, email_password, msg):
 
     return False, last_err
 
+def _has_email_service():
+    """
+    Checks if any email dispatch service is configured:
+    - Brevo REST API (HTTPS port 443 - works on Render/Railway Free Tier)
+    - Resend REST API (HTTPS port 443)
+    - SMTP (Ports 465/587 - Gmail App Password)
+    """
+    email_address = getattr(settings, 'EMAIL_ADDRESS', '').strip()
+    email_password = getattr(settings, 'EMAIL_PASSWORD', '').strip()
+    brevo_key = getattr(settings, 'BREVO_API_KEY', '').strip()
+    resend_key = getattr(settings, 'RESEND_API_KEY', '').strip()
+    return bool((email_address and email_password) or brevo_key or resend_key)
+
+def _get_sender_address():
+    sender = getattr(settings, 'EMAIL_ADDRESS', '').strip()
+    return sender if sender else 'e-voting@sru.edu.in'
+
 def send_email_otp(email_to):
     """
     Sends an OTP to the given email address.
-    If SMTP credentials are configured, sends via SMTP to the registered SRU email inbox.
-    If SMTP is not yet configured or connection fails, falls back gracefully to demo output.
+    If email service is configured, sends via Brevo API (port 443) or SMTP to the registered email inbox.
+    If not configured or connection fails, falls back gracefully to demo output.
     """
     # Generate 6-digit numeric OTP
     otp = ''.join(random.choice(string.digits) for _ in range(6))
     
+    sender_address = _get_sender_address()
     email_address = getattr(settings, 'EMAIL_ADDRESS', '').strip()
     email_password = getattr(settings, 'EMAIL_PASSWORD', '').strip()
 
-    if not email_address or not email_password:
+    if not _has_email_service():
         print(f"\n{'='*65}\n[DEMO MODE: OTP GENERATED FOR REGISTERED EMAIL: {email_to}]")
         print(f"OTP Code: {otp}")
-        print(f"To receive real-time emails in inboxes, configure EMAIL_ADDRESS & EMAIL_PASSWORD in .env")
+        print(f"To receive real emails in inboxes, configure BREVO_API_KEY (for Render) or EMAIL_ADDRESS & EMAIL_PASSWORD in .env")
         print(f"{'='*65}\n")
         return [True, otp, True]
 
     msg = EmailMessage()
-    msg['From'] = f"SRU E-Voting Portal <{email_address}>"
+    msg['From'] = f"SRU E-Voting Portal <{sender_address}>"
     msg['To'] = email_to
     msg['Subject'] = 'SRU Blockchain E-Voting - One-Time Passcode (OTP)'
     content = (
@@ -115,8 +280,10 @@ def send_email_otp(email_to):
             print("  3. Copy the 16-character code (e.g. abcd efgh ijkl mnop)")
             print("  4. Paste it into EMAIL_PASSWORD in your .env file")
             print("!"*65 + "\n")
-        logger.warning(f"SMTP delivery to {email_to} failed: {err}. Falling back to demo mode.")
-        print(f"\n[SMTP FAILED: {err}]\nFalling back to Demo Mode. Generated OTP for {email_to}: {otp}\n")
+        logger.warning(f"Email delivery to {email_to} failed: {err}. Falling back to demo mode.")
+        print(f"\n[EMAIL DISPATCH FAILED: {err}]\nNotice: If deployed on Render/Railway free tier, outbound SMTP ports 465/587 are blocked by cloud firewall.")
+        print("To send live emails on Render free tier, add BREVO_API_KEY in Render Environment Variables.")
+        print(f"Falling back to Demo Mode. Generated OTP for {email_to}: {otp}\n")
         return [True, otp, True]
 
 def send_email_private_key(email_to, private_key):
@@ -125,11 +292,32 @@ def send_email_private_key(email_to, private_key):
     """
     print(f"\n{'='*65}\n[ECDSA PRIVATE KEY ISSUED FOR {email_to}]\n{private_key}\n{'='*65}\n")
     
+    if not _has_email_service():
+        return [True]
+
+    sender_address = _get_sender_address()
     email_address = getattr(settings, 'EMAIL_ADDRESS', '').strip()
     email_password = getattr(settings, 'EMAIL_PASSWORD', '').strip()
 
-    if not email_address or not email_password:
-        return [True]
+    msg = EmailMessage()
+    msg['From'] = f"SRU E-Voting Portal <{sender_address}>"
+    msg['To'] = email_to
+    msg['Subject'] = 'Blockchain E-Voting - Your ECDSA Cryptographic Private Key'
+    content = (
+        f"Dear Voter,\n\n"
+        f"Your NIST P-256 ECDSA Cryptographic Private Key for digitally signing your ballot has been generated:\n\n"
+        f"{private_key}\n\n"
+        f"Paste this key into the voting portal to authenticate your vote.\n\n"
+        f"Thank you.\nSRU Blockchain Electoral Commission"
+    )
+    msg.set_content(content)
+
+    ok, err = _dispatch_smtp_message(email_address, email_password, msg)
+    if ok:
+        print(f"[REAL-TIME EMAIL DELIVERED] Private key sent to inbox: {email_to}")
+    else:
+        logger.warning(f"Private key email delivery failed: {err}")
+    return [True]
 
     msg = EmailMessage()
     msg['From'] = f"SRU E-Voting Portal <{email_address}>"
@@ -246,11 +434,12 @@ def send_vote_confirmation_email(email_to, voter_name, aadhaar, is_success, **kw
     # Console output for testing
     print(f"\n{'='*65}\n[VOTE CONFIRMATION EMAIL FOR {email_to}]\nSubject: {subject}\nStatus: {status_badge}\n{'='*65}\n")
 
-    if not email_address or not email_password:
+    if not _has_email_service():
         return [True, "Demo Mode: Email logged to console."]
 
+    sender_address = _get_sender_address()
     msg = EmailMessage()
-    msg['From'] = f"SRU Blockchain Electoral Commission <{email_address}>"
+    msg['From'] = f"SRU Blockchain Electoral Commission <{sender_address}>"
     msg['To'] = email_to
     msg['Subject'] = subject
 
