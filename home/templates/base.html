@@ -1,0 +1,166 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Voting System using Blockchain</title>
+
+    <link rel="stylesheet" type="text/css" href="{% static 'css/animations.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/loading.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/home.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/candidate-profile.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/voting.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/final-status.css' %}">
+
+    <script src="{% static 'scripts/jquery.js' %}"></script>
+    <script type="text/javascript">
+        $(document).ready(function(){
+            $.getScript("{% static 'scripts/base.js' %}");
+            $.getScript("{% static 'scripts/csrf.js' %}");
+        });
+    </script>
+
+    <style>
+        .nav-links-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 15px;
+        }
+        .nav-pill {
+            padding: 5px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #444;
+            background: rgba(0, 0, 0, 0.04);
+            border-radius: 4px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .nav-pill:hover {
+            background: #7e22ce;
+            color: white;
+        }
+        .menu-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 12px;
+            font-size: 20px;
+            cursor: pointer;
+            color: #4a154b;
+        }
+        .menu-btn:hover {
+            color: #7e22ce;
+        }
+        @media (max-width: 900px) {
+            .nav-links-bar {
+                display: none;
+            }
+        }
+    </style>
+
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+    {% csrf_token %}
+
+    <div class="gradient"></div>
+
+    <!-- -------------------------------------------- Main Content ----------------------------------- -->
+    <div class="main-content">
+        {% block main_content %}{% endblock %}
+    </div>
+
+    <!-- ----------------------------- Header --------------------------------- -->
+    <div class="header">
+        <div class="menu-btn" title="Open Navigation Menu">☰</div>
+
+        <div class="logo" title="Open Navigation Menu" style="cursor: pointer;">
+            <img style="height: 36px; width: 36px; margin: auto;" src="{% static 'images/logo.png' %}" alt="Logo">
+            <div class="logo-text">
+                <span class="logo-text" style="font-size: 15px; font-weight: bold; color: #222;">SRU Blockchain E-Voting</span>
+                <span class="logo-text" style="font-size: 11px; color: #7e22ce;">SR University • SHA3-256 • ECDSA P-256</span>
+            </div>
+        </div>
+
+        <div class="status-box">
+            <div class="status" style="color: rgb(102, 0, 128); background: rgba(201, 136, 255, 0.3);">
+                Decentralized Blockchain Voting System
+            </div>
+        </div>
+
+        <!-- Quick Desktop Navigation -->
+        <div class="nav-links-bar">
+            <a class="nav-pill" href="/">🗳️ Vote</a>
+            <a class="nav-pill" href="/show-result">📊 Results</a>
+            <a class="nav-pill" href="/mine-block">⛏️ Mine</a>
+            <a class="nav-pill" href="/blockchain">⛓️ Ledger</a>
+            <a class="nav-pill" href="/create-dummy-data">⚙️ Demo Data</a>
+            <a class="nav-pill" href="/admin" target="_blank">🛡️ Admin</a>
+        </div>
+
+        <div class="short-details">&nbsp;
+            <div class="basic-details" style="font-size: 13px;"></div>
+            <img class="profile-pic" alt="User">
+        </div>
+    </div>
+
+    <!-- ---------------------------------------- Navigation Drawer -------------------------------- -->
+    <div class="navigation">
+        <div class="navigation-drawer">
+            <div class="drawer-item drawer-item-back" style="cursor: pointer;">← Close Menu</div>
+
+            <a class="drawer-item drawer-item-logo" title="Home" href="/">
+                <div class="logo">
+                    <img style="height: 50px; width: 50px; margin: auto;" src="{% static 'images/logo.png' %}" alt="Logo">
+                    <div class="logo-text">
+                        <span class="logo-text" style="font-size: 18px; font-weight: bold;">SRU Blockchain E-Voting</span>
+                        <span class="logo-text" style="font-size: 12px; color: #7e22ce;">SR University Decentralized Ledger</span>
+                    </div>
+                </div>
+            </a>
+
+            <a class="drawer-item" href="/">
+                🗳️ Cast Ballot (Authentication)
+            </a>
+
+            <a class="drawer-item" href="/show-result">
+                📊 Live Election Results
+            </a>
+
+            <a class="drawer-item" href="/mine-block">
+                ⛏️ Mine Blocks (Proof-of-Work)
+            </a>
+
+            <a class="drawer-item" href="/blockchain">
+                ⛓️ Public Blockchain Explorer
+            </a>
+
+            <a class="drawer-item" href="/create-dummy-data">
+                ⚙️ Reset / Seed Demo Data
+            </a>
+
+            <a class="drawer-item" href="/admin" target="_blank">
+                🛡️ Django Administration Panel
+            </a>
+        </div>
+    </div>
+
+    <!-- --------------------------------- Loading Modal ------------------------------ -->
+    <div class="loading-div">
+        <img src="{% static 'images/logo.png' %}" alt="Loading">
+        <div style="font-weight: bold; margin-top: 10px;">Blockchain E-Voting System</div>
+        <div style="font-size: 13px; color: #7e22ce;">SHA3-256 • Proof-of-Work • ECDSA</div>
+        <div id="loading-message" class="loading-message" style="margin-top: 10px;">Please wait...</div>
+        <img class="loading-image" src="{% static 'images/loading.gif' %}" alt="Progress">
+    </div>
+
+</body>
+</html>

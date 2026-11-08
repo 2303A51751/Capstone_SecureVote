@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block head %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/blockchain.css' %}">
+
+    <script src="{% static 'scripts/base.js' %}"></script>
+    <script src="{% static 'scripts/blockchain.js' %}"></script>
+    <script>
+        $(document).ready(function(){
+            hide_loading();
+            showAlert(
+                'Public Blockchain Ledger: All mined blocks and cryptographic hashes are listed below.',
+                'rgba(201, 136, 255, 0.3)', 'rgb(102, 0, 128)');
+        });
+    </script>
+{% endblock %}
+
+{% block main_content %}
+<div class="blocks">
+    
+    <!-- Blockchain Stats Header -->
+    <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; justify-content: space-between; align-items: center; background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.06);">
+        <div>
+            <h2 style="margin: 0; color: #4a154b; font-size: 20px;">Distributed Blockchain Ledger</h2>
+            <span style="font-size: 12px; color: #666;">Consensus: Proof-of-Work (PoW) | Hashing: SHA3-256 | Signature: ECDSA P-256</span>
+        </div>
+        <div style="display: flex; gap: 15px;">
+            <div style="text-align: center; background: #faf5ff; padding: 6px 14px; border-radius: 6px; border: 1px solid #e9d5ff;">
+                <div style="font-size: 16px; font-weight: bold; color: #7e22ce;">{{ total_blocks }}</div>
+                <div style="font-size: 11px; color: #666;">Blocks Sealed</div>
+            </div>
+            <div style="text-align: center; background: #f0fdf4; padding: 6px 14px; border-radius: 6px; border: 1px solid #bbf7d0;">
+                <div style="font-size: 16px; font-weight: bold; color: #16a34a;">{{ sealed_votes }}</div>
+                <div style="font-size: 11px; color: #666;">Sealed Votes</div>
+            </div>
+            <div style="text-align: center; background: #fefce8; padding: 6px 14px; border-radius: 6px; border: 1px solid #fef08a;">
+                <div style="font-size: 16px; font-weight: bold; color: #ca8a04;">{{ pending_votes }}</div>
+                <div style="font-size: 11px; color: #666;">Pending Mempool</div>
+            </div>
+        </div>
+    </div>
+
+    <table class="mine-block-result">
+        <tr class="table-header">
+            <td>Block ID</td>
+            <td>Previous Hash</td>
+            <td>Merkle Root</td>
+            <td>Block Hash</td>
+            <td>Nonce</td>
+            <td>Timestamp</td>
+            <td>
+                <div class="verify-button" title="Select all to verify entire chain">
+                    <input type="checkbox" onchange="verifySelect(this)">
+                    <span onclick="verifyBlock(this)" style="cursor: pointer; font-weight: bold;">Verify All</span>
+                </div>
+            </td>
+        </tr>
+
+        {% if blocks %}
+
+        {% for block in blocks %}
+        <tr id="{{ block.id }}">
+            <td>
+                <a class="block-info-link" href="/block-info/?id={{ block.id }}" style="font-weight: bold;">
+                    #{{ block.id }}
+                </a>
+            </td>
+            <td title="{{ block.prev_hash }}" style="color: rgb(78, 0, 151); font-family: monospace; font-size: 11px;">
+                {{ block.prev_hash|truncatechars:18 }}
+            </td>
+            <td title="{{ block.merkle_hash }}" style="color: rgb(133, 0, 151); font-family: monospace; font-size: 11px;">
+                {{ block.merkle_hash|truncatechars:18 }}
+            </td>
+            <td title="{{ block.this_hash }}" style="color: rgb(151, 0, 113); font-family: monospace; font-size: 11px;">
+                {{ block.this_hash|truncatechars:18 }}
+            </td>
+            <td>{{ block.nonce }}</td>
+            <td>{{ block.timestamp|date:"Y-m-d" }} {{ block.timestamp|time:"H:i:s" }}</td>
+            <td>
+                <div class="verify-button" title="Click to verify this Block">
+                    <input type="checkbox" onchange="verifySelect(this)">
+                    <span onclick="verifyBlock(this)" style="cursor: pointer;">Verify</span>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+
+        {% else %}
+        <tr>
+            <td colspan="7" style="padding: 30px; text-align: center; color: #888;">
+                No blocks mined yet. Go to <a href="/mine-block" style="color: #7e22ce; font-weight: bold;">Mine Blocks</a> to seal pending votes!
+            </td>
+        </tr>
+        {% endif %}
+
+    </table>
+</div>
+
+{% endblock %}

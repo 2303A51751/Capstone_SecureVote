@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block head %}
+<script src="{% static 'scripts/base.js' %}"></script>
+<script src="{% static 'scripts/csrf.js' %}"></script>
+<script src="{% static 'scripts/home.js' %}"></script>
+{% endblock %}
+
+{% block main_content %}
+
+<div class="authentication">
+    {% csrf_token %}
+
+    <span>Enter Your 12-Digit Aadhaar Card Number (UIDAI)</span>
+    <div class="input-section">
+        <input type="text" placeholder="5403 9943 0308" class="input-text" id="aadhar" autocomplete="off" autofocus value="540399430308">
+        <button type="button" class="submit" id="auth-submit-btn" onclick="submit_aadhar()">Authenticate</button>
+    </div>
+
+    <!-- Inline Alert / Feedback for Instant Visibility -->
+    <div id="auth-inline-msg" style="display: none; width: 100%; box-sizing: border-box; margin-top: 15px; padding: 12px 18px; border-radius: 8px; font-size: 13px; text-align: center;"></div>
+
+    <!-- Team Members / Registered Voters Panel -->
+    <div class="demo-voter-panel">
+        <div class="demo-panel-header">
+            <span class="demo-panel-title">👥 Team Members (Electoral Roll) - Click to Cast Vote</span>
+            <a href="/create-dummy-data" style="font-size: 11px; color: #ff5100; text-decoration: none;">Reset Database</a>
+        </div>
+
+        <div class="demo-chip-group">
+            <div class="demo-group-label">
+                <span style="color: #16a34a;">●</span> Select Team Member to Authenticate & Vote:
+            </div>
+            <div class="demo-chips" id="ready-voters">
+                <span class="demo-chip ready" onclick="selectDemoVoter('540399430308')">
+                    <strong>Supreeth</strong> (5403 9943 0308) • 2303a51770@sru.edu.in
+                </span>
+                <span class="demo-chip ready" onclick="selectDemoVoter('319793558085')">
+                    <strong>Abhishek</strong> (3197 9355 8085) • 2303a51762@sru.edu.in
+                </span>
+                <span class="demo-chip ready" onclick="selectDemoVoter('416710509637')">
+                    <strong>Awez ali</strong> (4167 1050 9637) • 2303a51767@sru.edu.in
+                </span>
+                <span class="demo-chip ready" onclick="selectDemoVoter('652196177770')">
+                    <strong>Charith</strong> (6521 9617 7770) • 2303a51751@sru.edu.in
+                </span>
+            </div>
+        </div>
+
+        <div class="demo-chip-group" id="voted-group" style="margin-top: 12px; display: none;">
+            <div class="demo-group-label">
+                <span style="color: #dc2626;">●</span> Already Voted (Duplicate Rejection):
+            </div>
+            <div class="demo-chips" id="voted-voters"></div>
+        </div>
+
+        <div class="demo-hint" style="margin-top: 15px; font-size: 12px; color: #555;">
+            🔒 Security Notice: The one-time verification passcode (OTP) will be strictly delivered to the authenticated team member's registered SRU email ID.
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

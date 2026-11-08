@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <circle cx="50" cy="50" r="48" fill="#FEF2F2" stroke="#DC2626" stroke-width="3"/>
+  <!-- Ballot box with cross -->
+  <rect x="32" y="30" width="36" height="36" rx="4" fill="none" stroke="#DC2626" stroke-width="3"/>
+  <line x1="36" y1="34" x2="64" y2="62" stroke="#DC2626" stroke-width="4" stroke-linecap="round"/>
+  <line x1="64" y1="34" x2="36" y2="62" stroke="#DC2626" stroke-width="4" stroke-linecap="round"/>
+  <text x="50" y="88" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#991B1B">NOTA</text>
+</svg>
+

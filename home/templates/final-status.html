@@ -1,0 +1,53 @@
+<div class="final-status-container" style="max-width: 700px; margin: 20px auto; padding: 25px; background: white; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);">
+    
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h2 style="color: #15803d; margin: 0; font-size: 22px;">Vote Successfully Registered!</h2>
+        <p style="color: #666; font-size: 13px; margin: 5px 0 0 0;">Cryptographic ballot signed with ECDSA (NIST P-256 / SHA3-256)</p>
+    </div>
+
+    {% if email and is_success %}
+    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 18px; margin: 15px 0; text-align: center;">
+        <span style="font-size: 13px; color: #166534; font-weight: 500;">
+            ✉️ An official vote confirmation receipt with your cryptographic signature has been delivered to: <strong>{{ email }}</strong>
+        </span>
+    </div>
+    {% elif email %}
+    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px 18px; margin: 15px 0; text-align: center;">
+        <span style="font-size: 13px; color: #991b1b; font-weight: 500;">
+            ⚠️ A status notice regarding this attempt was sent to: <strong>{{ email }}</strong>
+        </span>
+    </div>
+    {% endif %}
+
+    <table class="final-status" style="width: 100%; border-collapse: collapse;">
+        <tr class="final-status-row" style="border-bottom: 1px solid #eee;">
+            <td style="padding: 12px 10px; font-weight: bold; width: 180px; color: #444;">Ballot Hash (SHA3-256):</td>
+            <td style="padding: 12px 10px; font-family: monospace; font-size: 11px; word-break: break-all; color: #1e293b;">{{ ballot }}</td>
+        </tr>
+        <tr class="final-status-row" style="border-bottom: 1px solid #eee;">
+            <td style="padding: 12px 10px; font-weight: bold; color: #444;">ECDSA Signature:</td>
+            <td style="padding: 12px 10px; font-family: monospace; font-size: 11px; word-break: break-all; color: #7e22ce;">{{ ballot_signature }}</td>
+        </tr>
+        <tr class="final-status-row">
+            <td style="padding: 12px 10px; font-weight: bold; color: #444;">Status:</td>
+            <td style="padding: 12px 10px; font-weight: 500; color: #15803d;">{{ status }}</td>
+        </tr>
+    </table>
+
+    <!-- Quick Action Navigation -->
+    <div style="margin-top: 25px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+        <a href="/mine-block" style="background: #7e22ce; color: white; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold;">
+            ⛏️ Mine Into Blockchain
+        </a>
+        <a href="/show-result" style="background: #0284c7; color: white; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold;">
+            📊 View Election Results
+        </a>
+        <a href="/blockchain" style="background: #334155; color: white; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold;">
+            ⛓️ Blockchain Ledger
+        </a>
+        <a href="/" style="background: #16a34a; color: white; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold;">
+            🗳️ Cast Another Vote
+        </a>
+    </div>
+
+</div>

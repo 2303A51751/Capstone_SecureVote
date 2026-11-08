@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Django
+*.log
+local_settings.py
+.env
+staticfiles/
+
+# Database (optional - keep sqlite3 for demo if needed, but ignore backups)
+*.sqlite3-journal
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Antigravity & Scratch
+.gemini/
+.system_generated/

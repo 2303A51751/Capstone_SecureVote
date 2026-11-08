@@ -1,0 +1,74 @@
+{% load static %}
+
+<div class="party-selection">
+
+    <div style="text-align: center; margin-bottom: 10px;">
+        <span style="color: #6b21a8; font-size: 15px; font-weight: 500;">Official Ballot Paper - Select Your Representative</span>
+    </div>
+
+    <input class="search-box" placeholder="Search party or candidate..." type="text" id="search" autocomplete="off">
+
+    <div class="party-list">
+
+        {% for party in parties %}
+
+            <div class="option" id="{{ party.party_id }}">
+                <div class="party-logo">
+                    <img style="width: 80px; height: 80px; object-fit: contain;" src="{{ party.party_logo }}" onerror="this.src='{% static 'images/logo.png' %}'">
+                </div>
+                <div class="divider"></div>
+                <div class="party-name" style="text-align: left;">
+                    <div style="font-size: 18px; font-weight: bold;">{{ party.party_name }}</div>
+                    {% if party.candidate_name %}
+                    <div style="font-size: 13px; color: #666; margin-top: 3px;">Candidate: <strong>{{ party.candidate_name }}</strong></div>
+                    {% endif %}
+                </div>
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+    <div class="dialog">
+        <div class="vote-confirmation" style="max-width: 500px; padding: 25px;">
+            <div class="confirm" style="font-size: 20px;">Confirm & Digitally Sign Ballot</div>
+            <img class="confirmation-party-logo" style="width: 80px; height: 80px; margin: 10px auto; object-fit: contain;">
+            <div class="confirmation-party-name" style="font-size: 18px; font-weight: bold; color: #333;"></div>
+            
+            <div style="margin-top: 15px; font-size: 12px; color: #666; text-align: left; background: #fdf4ff; border: 1px solid #f0abfc; padding: 10px; border-radius: 6px;">
+                <strong>Cryptographic Verification (ECDSA P-256):</strong>
+                Your private key will create a digital signature over your ballot hash (UID | Party | Timestamp).
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <button type="button" id="auto-fill-key-btn" style="background: #7e22ce; color: white; border: none; padding: 5px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                        📋 Auto-Fill Private Key
+                    </button>
+                    <button type="button" id="download-key-btn" style="background: #0284c7; color: white; border: none; padding: 5px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                        ⬇️ Download .pem
+                    </button>
+                </div>
+            </div>
+
+            <textarea id="private-key-input" style="margin-top: 10px; font-family: monospace; font-size: 11px; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; padding: 8px;" placeholder="-----BEGIN PRIVATE KEY----- ... (Paste your ECDSA key or click Auto-Fill above)" rows="6"></textarea>
+
+            <div class="vote-confirmation-buttons" style="margin-top: 15px;">
+                <a id="final-confirm" style="background: #16a34a;">Yes, Cast Vote</a>
+                <a id="cancel-confirm" style="background: #dc2626;">Cancel</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="all-done">
+    <div class="front">
+        <div class="selected-party">
+            <img class="voted-party-image" src="{% static 'images/logo.png' %}">
+            <div class="final-message"></div>
+        </div>
+        <img class="loading-img" style="margin-top: 40px;" src="{% static 'images/loading.gif' %}">
+        <div style="font-size: 16px; margin-top: 15px; color: #4a154b;">Generating SHA3-256 Ballot Hash & ECDSA Signature...</div>
+    </div>
+</div>
+
+<script>
+    $.getScript( "{% static 'scripts/voting.js' %}" );
+</script>

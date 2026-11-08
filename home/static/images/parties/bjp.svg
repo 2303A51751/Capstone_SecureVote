@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <circle cx="50" cy="50" r="48" fill="#FFF7ED" stroke="#EA580C" stroke-width="3"/>
+  <!-- Lotus petals -->
+  <path d="M50 25 C45 35 42 52 50 65 C58 52 55 35 50 25 Z" fill="#EA580C"/>
+  <path d="M50 35 C38 42 32 58 45 70 C48 60 48 48 50 35 Z" fill="#F97316"/>
+  <path d="M50 35 C62 42 68 58 55 70 C52 60 52 48 50 35 Z" fill="#F97316"/>
+  <path d="M50 48 C32 52 24 66 38 74 C43 68 46 58 50 48 Z" fill="#FB923C"/>
+  <path d="M50 48 C68 52 76 66 62 74 C57 68 54 58 50 48 Z" fill="#FB923C"/>
+  <!-- Lotus base leaves -->
+  <path d="M28 75 C38 72 48 74 50 78 C52 74 62 72 72 75 C60 82 40 82 28 75 Z" fill="#15803D"/>
+  <text x="50" y="93" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#C2410C">BJP</text>
+</svg>
+

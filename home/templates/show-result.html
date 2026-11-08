@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block head %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/show-result.css' %}">
+
+    <script src="{% static 'scripts/base.js' %}"></script>
+    <script>
+        $(document).ready(function(){
+            hide_loading();
+            showAlert('Live Election Tally: Aggregated directly from verified cryptographic ballot records.', 'rgba(201, 136, 255, 0.3)', 'rgb(102, 0, 128)');
+        });
+    </script>
+{% endblock %}
+
+{% block main_content %}
+
+<div class="show-result" style="max-width: 900px; margin: auto; padding: 15px;">
+
+    <!-- Election Metrics Overview -->
+    <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px; justify-content: space-between;">
+        <div style="flex: 1; min-width: 180px; background: white; padding: 18px 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border-top: 4px solid #7e22ce;">
+            <div style="font-size: 28px; font-weight: bold; color: #7e22ce;">{{ total_votes }}</div>
+            <div style="color: #666; font-size: 13px; margin-top: 4px;">Total Valid Ballots</div>
+        </div>
+        <div style="flex: 1; min-width: 180px; background: white; padding: 18px 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border-top: 4px solid #16a34a;">
+            <div style="font-size: 28px; font-weight: bold; color: #16a34a;">{{ sealed_votes }}</div>
+            <div style="color: #666; font-size: 13px; margin-top: 4px;">Sealed in Blockchain</div>
+        </div>
+        <div style="flex: 1; min-width: 180px; background: white; padding: 18px 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border-top: 4px solid #ca8a04;">
+            <div style="font-size: 28px; font-weight: bold; color: #ca8a04;">{{ unsealed_votes }}</div>
+            <div style="color: #666; font-size: 13px; margin-top: 4px;">Pending in Mempool</div>
+        </div>
+        <div style="flex: 1; min-width: 180px; background: white; padding: 18px 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border-top: 4px solid #0284c7;">
+            <div style="font-size: 28px; font-weight: bold; color: #0284c7;">{{ total_blocks }}</div>
+            <div style="color: #666; font-size: 13px; margin-top: 4px;">Blockchain Blocks</div>
+        </div>
+    </div>
+
+    {% if winner and total_votes > 0 %}
+    <!-- Leading Party Banner -->
+    <div style="background: linear-gradient(135deg, #fef3c7, #fef9c3); border: 1px solid #fde047; border-radius: 10px; padding: 15px 25px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+            <span style="font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #854d0e;">🏆 Current Frontrunner</span>
+            <div style="font-size: 20px; font-weight: bold; color: #713f12; margin-top: 4px;">{{ winner }}</div>
+        </div>
+        <div>
+            <a href="/blockchain" style="background: #854d0e; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: bold;">
+                Verify on Ledger →
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Detailed Standings Table -->
+    <table class="vote-count" style="width: 100%; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+        <tr class="table-header">
+            <td style="width: 60px;">Rank</td>
+            <td style="width: 90px;">Symbol</td>
+            <td>Party & Candidate</td>
+            <td style="width: 120px;">Vote Count</td>
+            <td style="width: 200px;">Vote Share</td>
+        </tr>
+        {% for result in results %}
+        <tr>
+            <td style="font-weight: bold; font-size: 16px; color: #555;">
+                {% if result.sr == 1 %}🥇{% elif result.sr == 2 %}🥈{% elif result.sr == 3 %}🥉{% else %}{{ result.sr }}{% endif %}
+            </td>
+            <td>
+                <img style="width: 50px; height: 50px; object-fit: contain;" src="{{ result.party_symbol }}" onerror="this.src='{% static 'images/logo.png' %}'">
+            </td>
+            <td>
+                <div style="font-weight: bold; font-size: 16px; color: #222;">{{ result.party_name }}</div>
+                {% if result.candidate_name %}
+                <div style="font-size: 12px; color: #666; margin-top: 2px;">Candidate: <strong>{{ result.candidate_name }}</strong></div>
+                {% endif %}
+            </td>
+            <td style="font-size: 20px; font-weight: bold; color: #7e22ce;">
+                {{ result.vote_count }}
+            </td>
+            <td>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="flex: 1; background: #e5e7eb; border-radius: 10px; height: 12px; overflow: hidden;">
+                        <div style="background: linear-gradient(90deg, #7e22ce, #c084fc); height: 100%; width: {{ result.percentage }}%; border-radius: 10px;"></div>
+                    </div>
+                    <span style="font-size: 13px; font-weight: bold; color: #444; width: 45px;">{{ result.percentage }}%</span>
+                </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5" style="text-align: center; padding: 40px; color: #888;">
+                No votes registered yet. Go to <a href="/" style="color: #7e22ce; font-weight: bold;">Home</a> to cast a vote!
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <div style="margin-top: 25px; text-align: center; display: flex; gap: 15px; justify-content: center;">
+        <a href="/" style="background: #16a34a; color: white; padding: 10px 22px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold;">
+            🗳️ Cast Another Vote
+        </a>
+        <a href="/mine-block" style="background: #7e22ce; color: white; padding: 10px 22px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold;">
+            ⛏️ Mine Unsealed Votes
+        </a>
+        <a href="/blockchain" style="background: #334155; color: white; padding: 10px 22px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold;">
+            ⛓️ Inspect Blockchain
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}
