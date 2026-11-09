@@ -20,7 +20,7 @@ def _extract_email_payloads(msg):
     """
     Extracts recipient, subject, text, and html payloads from an EmailMessage.
     """
-    subject = str(msg.get('Subject', 'SRU Blockchain E-Voting'))
+    subject = str(msg.get('Subject', 'SecureVote Blockchain System'))
     recipient = str(msg.get('To', ''))
     
     html_content = None
@@ -47,7 +47,7 @@ def _extract_email_payloads(msg):
         
     return recipient, subject, text_content, html_content
 
-def _send_brevo_api(email_to, subject, text_content, html_content, sender_email, sender_name="SRU E-Voting"):
+def _send_brevo_api(email_to, subject, text_content, html_content, sender_email, sender_name="SecureVote E-Voting"):
     """
     Sends email via Brevo REST API over standard HTTPS (Port 443).
     Bypasses Render / Railway free tier SMTP firewall restrictions.
@@ -57,7 +57,7 @@ def _send_brevo_api(email_to, subject, text_content, html_content, sender_email,
         return False, "BREVO_API_KEY not configured"
     
     url = "https://api.brevo.com/v3/smtp/email"
-    sender_clean = sender_email if sender_email and '@' in sender_email else 'noreply@sru.edu.in'
+    sender_clean = sender_email if sender_email and '@' in sender_email else 'noreply@securevote.org'
     
     payload = {
         "sender": {"name": sender_name, "email": sender_clean},
@@ -77,7 +77,7 @@ def _send_brevo_api(email_to, subject, text_content, html_content, sender_email,
             "accept": "application/json",
             "api-key": api_key,
             "content-type": "application/json",
-            "User-Agent": "SRU-Blockchain-Voting/1.0"
+            "User-Agent": "SecureVote-Blockchain-System/1.0"
         },
         method="POST"
     )
@@ -103,7 +103,7 @@ def _send_resend_api(email_to, subject, text_content, html_content, sender_email
     url = "https://api.resend.com/emails"
     from_field = sender_email if sender_email and '@' in sender_email else "onboarding@resend.dev"
     if "<" not in from_field and "@" in from_field:
-        from_field = f"SRU E-Voting <{from_field}>"
+        from_field = f"SecureVote E-Voting <{from_field}>"
 
     payload = {
         "from": from_field,
@@ -122,7 +122,7 @@ def _send_resend_api(email_to, subject, text_content, html_content, sender_email
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
-            "User-Agent": "SRU-Blockchain-Voting/1.0"
+            "User-Agent": "SecureVote-Blockchain-System/1.0"
         },
         method="POST"
     )
@@ -208,7 +208,7 @@ def _has_email_service():
 
 def _get_sender_address():
     sender = getattr(settings, 'EMAIL_ADDRESS', '').strip()
-    return sender if sender else 'e-voting@sru.edu.in'
+    return sender if sender else 'e-voting@securevote.org'
 
 def send_email_otp(email_to):
     """
@@ -231,14 +231,14 @@ def send_email_otp(email_to):
         return [True, otp, True]
 
     msg = EmailMessage()
-    msg['From'] = f"SRU E-Voting Portal <{sender_address}>"
+    msg['From'] = f"SecureVote E-Voting Portal <{sender_address}>"
     msg['To'] = email_to
-    msg['Subject'] = 'SRU Blockchain E-Voting - One-Time Passcode (OTP)'
+    msg['Subject'] = 'SecureVote Blockchain - One-Time Passcode (OTP)'
     content = (
         f"Dear Voter,\n\n"
-        f"Your One-Time Passcode (OTP) to authenticate your identity on the Blockchain E-Voting System is: {otp}\n\n"
+        f"Your One-Time Passcode (OTP) to authenticate your identity on the SecureVote Blockchain System is: {otp}\n\n"
         f"This OTP is valid for your current voting session.\n\n"
-        f"Thank you.\nSRU Blockchain Electoral Commission"
+        f"Thank you.\nSecureVote Blockchain Electoral Commission"
     )
     msg.set_content(content)
     msg.add_alternative(f'''\
@@ -246,7 +246,7 @@ def send_email_otp(email_to):
         <html>
             <body style="font-family: Arial, sans-serif; padding: 25px; color: #333; max-width: 550px; margin: auto; border: 1px solid #e5e7eb; border-radius: 10px;">
                 <div style="background: linear-gradient(135deg, #7e22ce, #4c1d95); padding: 15px; border-radius: 8px; text-align: center; color: white;">
-                    <h2 style="margin: 0;">SRU Blockchain E-Voting System</h2>
+                    <h2 style="margin: 0;">SecureVote Blockchain System</h2>
                     <span style="font-size: 12px; opacity: 0.9;">Secure • Decentralized • Auditable</span>
                 </div>
                 <div style="padding: 20px 0;">
@@ -258,7 +258,7 @@ def send_email_otp(email_to):
                     <p style="font-size: 13px; color: #666;">This passcode is intended strictly for: <strong>{email_to}</strong>.</p>
                 </div>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                <p style="font-size: 11px; color: #999; text-align: center;">SR University • Blockchain Electoral Network</p>
+                <p style="font-size: 11px; color: #999; text-align: center;">SecureVote • Blockchain Electoral Network</p>
             </body>
         </html>
     ''', subtype='html')
@@ -300,15 +300,15 @@ def send_email_private_key(email_to, private_key):
     email_password = getattr(settings, 'EMAIL_PASSWORD', '').strip()
 
     msg = EmailMessage()
-    msg['From'] = f"SRU E-Voting Portal <{sender_address}>"
+    msg['From'] = f"SecureVote E-Voting Portal <{sender_address}>"
     msg['To'] = email_to
-    msg['Subject'] = 'Blockchain E-Voting - Your ECDSA Cryptographic Private Key'
+    msg['Subject'] = 'SecureVote Blockchain - Your ECDSA Cryptographic Private Key'
     content = (
         f"Dear Voter,\n\n"
         f"Your NIST P-256 ECDSA Cryptographic Private Key for digitally signing your ballot has been generated:\n\n"
         f"{private_key}\n\n"
         f"Paste this key into the voting portal to authenticate your vote.\n\n"
-        f"Thank you.\nSRU Blockchain Electoral Commission"
+        f"Thank you.\nSecureVote Blockchain Electoral Commission"
     )
     msg.set_content(content)
 
@@ -318,21 +318,6 @@ def send_email_private_key(email_to, private_key):
     else:
         logger.warning(f"Private key email delivery failed: {err}")
     return [True]
-
-    msg = EmailMessage()
-    msg['From'] = f"SRU E-Voting Portal <{email_address}>"
-    msg['To'] = email_to
-    msg['Subject'] = 'Blockchain E-Voting - Your ECDSA Cryptographic Private Key'
-    content = (
-        f"Dear Voter,\n\n"
-        f"Your NIST P-256 ECDSA Cryptographic Private Key for digitally signing your ballot has been generated:\n\n"
-        f"{private_key}\n\n"
-        f"Paste this key into the voting portal to authenticate your vote.\n\n"
-        f"Thank you.\nSRU Blockchain Electoral Commission"
-    )
-    msg.set_content(content)
-
-    ok, err = _dispatch_smtp_message(email_address, email_password, msg)
     if ok:
         print(f"[REAL-TIME EMAIL DELIVERED] Private key sent to inbox: {email_to}")
     else:
@@ -409,7 +394,7 @@ def send_vote_confirmation_email(email_to, voter_name, aadhaar, is_success, **kw
     failure_reason = kwargs.get('failure_reason', 'Cryptographic verification or duplicate rejection')
 
     if is_success:
-        subject = "🗳️ Vote Successfully Cast & Recorded - SRU Blockchain E-Voting"
+        subject = "🗳️ Vote Successfully Cast & Recorded - SecureVote Blockchain"
         status_color = "#16a34a"
         status_badge = "CONFIRMED & SEALED"
         status_heading = "Your Vote Has Been Successfully Cast & Recorded!"
@@ -417,10 +402,10 @@ def send_vote_confirmation_email(email_to, voter_name, aadhaar, is_success, **kw
             f"Dear <strong>{voter_name}</strong>,<br><br>"
             f"Congratulations! Your ballot has been authenticated, cryptographically signed using your "
             f"<strong>NIST P-256 ECDSA Private Key</strong>, and permanently recorded in the "
-            f"<strong>SRU Blockchain Transaction Pool (Mempool)</strong> awaiting block sealing."
+            f"<strong>SecureVote Blockchain Transaction Pool (Mempool)</strong> awaiting block sealing."
         )
     else:
-        subject = "⚠️ Vote Submission Alert - SRU Blockchain E-Voting"
+        subject = "⚠️ Vote Submission Alert - SecureVote Blockchain"
         status_color = "#dc2626"
         status_badge = "REJECTED / FAILED"
         status_heading = "Vote Submission Notice: Action Could Not Be Completed"
@@ -439,7 +424,7 @@ def send_vote_confirmation_email(email_to, voter_name, aadhaar, is_success, **kw
 
     sender_address = _get_sender_address()
     msg = EmailMessage()
-    msg['From'] = f"SRU Blockchain Electoral Commission <{sender_address}>"
+    msg['From'] = f"SecureVote Blockchain Electoral Commission <{sender_address}>"
     msg['To'] = email_to
     msg['Subject'] = subject
 
@@ -456,8 +441,8 @@ def send_vote_confirmation_email(email_to, voter_name, aadhaar, is_success, **kw
            f"Your ballot is cryptographically tamper-evident and can be audited on the public blockchain explorer."
            if is_success else
            f"Reason: {failure_reason}\n\n"
-           f"If you did not initiate this vote attempt, please report it to the SRU Electoral Commission.")
-        + f"\n\nThank you,\nSRU Blockchain Electoral Commission"
+           f"If you did not initiate this vote attempt, please report it to the Electoral Commission.")
+        + f"\n\nThank you,\nSecureVote Blockchain Electoral Commission"
     )
     msg.set_content(plain_content)
 
@@ -487,7 +472,7 @@ def send_vote_confirmation_email(email_to, voter_name, aadhaar, is_success, **kw
                 <div style="max-width: 620px; margin: auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e5e7eb;">
                     <!-- Header -->
                     <div style="background: linear-gradient(135deg, #7e22ce, #4c1d95); padding: 25px; text-align: center; color: white;">
-                        <h2 style="margin: 0; font-size: 22px; letter-spacing: 0.5px;">SRU Blockchain E-Voting System</h2>
+                        <h2 style="margin: 0; font-size: 22px; letter-spacing: 0.5px;">SecureVote Blockchain System</h2>
                         <span style="font-size: 13px; opacity: 0.9;">Official Electoral Commission • Digital Receipt</span>
                     </div>
 
@@ -521,7 +506,7 @@ def send_vote_confirmation_email(email_to, voter_name, aadhaar, is_success, **kw
 
                     <!-- Footer -->
                     <div style="background: #f9fafb; padding: 15px 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #6b7280;">
-                        <p style="margin: 0;">SR University • School of Computer Science & Engineering</p>
+                        <p style="margin: 0;">SecureVote Decentralized Electoral Network</p>
                         <p style="margin: 4px 0 0 0; font-size: 11px; color: #9ca3af;">Decentralized Electronic Voting Platform • Academic Year 2025–2026</p>
                     </div>
                 </div>

@@ -30,7 +30,7 @@ def main():
     resend_key = getattr(settings, 'RESEND_API_KEY', '').strip()
 
     print("=" * 65)
-    print("SRU BLOCKCHAIN E-VOTING: REAL-TIME EMAIL DISPATCH DIAGNOSTIC")
+    print("SECUREVOTE BLOCKCHAIN SYSTEM: REAL-TIME EMAIL DISPATCH DIAGNOSTIC")
     print("=" * 65)
     print(f"Brevo API Key:  {'CONFIGURED (HTTPS Port 443 - Render Ready)' if brevo_key else '[NOT SET]'}")
     print(f"Resend API Key: {'CONFIGURED (HTTPS Port 443 - Render Ready)' if resend_key else '[NOT SET]'}")
