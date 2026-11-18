@@ -218,8 +218,9 @@ def send_mobile_otp(phone_number):
     Supports:
       1. Twilio SMS API (HTTPS REST - Port 443)
       2. Fast2SMS API (Indian Mobile Numbers)
-      3. Seamless Demo Mode Fallback (if no API keys configured or connection fails)
-    Returns: [success (bool), otp_code (str), is_demo (bool)]
+      3. 2Factor.in API
+      4. Seamless Demo Mode Fallback (if no API keys configured or connection fails)
+    Returns: [success (bool), otp_code (str), is_demo (bool), gateway_error (str or None)]
     """
     clean_phone = str(phone_number).strip().replace(' ', '').replace('-', '')
     otp = ''.join(random.choice(string.digits) for _ in range(6))
@@ -229,6 +230,7 @@ def send_mobile_otp(phone_number):
     twilio_token = getattr(settings, 'TWILIO_AUTH_TOKEN', '').strip()
     twilio_from = getattr(settings, 'TWILIO_PHONE_NUMBER', '').strip()
     fast2sms_key = getattr(settings, 'FAST2SMS_API_KEY', '').strip()
+    last_gateway_error = None
 
     # 1. Try Twilio if configured
     if twilio_sid and twilio_token and twilio_from:
@@ -250,8 +252,13 @@ def send_mobile_otp(phone_number):
             )
             with urllib.request.urlopen(req, timeout=10) as resp:
                 print(f"\n[REAL-TIME SMS DELIVERED] Twilio sent OTP to mobile: {target_phone}\n")
-                return [True, otp, False]
+                return [True, otp, False, None]
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode('utf-8', errors='ignore')
+            last_gateway_error = f"Twilio HTTP {e.code}: {err_body}"
+            logger.warning(f"Twilio HTTP error: {last_gateway_error}")
         except Exception as e:
+            last_gateway_error = f"Twilio error: {e}"
             logger.warning(f"Twilio SMS delivery to {clean_phone} failed: {e}. Falling back...")
 
     # 2. Try Fast2SMS if configured (popular for Indian 10-digit mobile numbers)
@@ -277,12 +284,23 @@ def send_mobile_otp(phone_number):
                 resp_data = json.loads(resp.read().decode('utf-8'))
                 if resp_data.get('return'):
                     print(f"\n[REAL-TIME SMS DELIVERED] Fast2SMS sent OTP {otp} to mobile: +91 {ten_digit}\n")
-                    return [True, otp, False]
+                    return [True, otp, False, None]
                 else:
-                    logger.warning(f"Fast2SMS API error: {resp_data}")
-                    print(f"\n[Fast2SMS ERROR]: {resp_data}\n")
+                    msg_txt = resp_data.get('message', [str(resp_data)])
+                    if isinstance(msg_txt, list):
+                        msg_txt = ", ".join(msg_txt)
+                    last_gateway_error = f"Fast2SMS: {msg_txt}"
+                    print(f"\n[Fast2SMS ERROR]: {last_gateway_error}\n")
+        except urllib.error.HTTPError as e:
+            try:
+                err_json = json.loads(e.read().decode('utf-8', errors='ignore'))
+                err_msg = err_json.get('message', str(e))
+            except Exception:
+                err_msg = str(e)
+            last_gateway_error = f"Fast2SMS error {e.code}: {err_msg}"
+            print(f"\n[Fast2SMS HTTP {e.code}]: {err_msg}\n")
         except Exception as e:
-            logger.warning(f"Fast2SMS delivery to {clean_phone} failed: {e}. Falling back...")
+            last_gateway_error = f"Fast2SMS failed: {e}"
             print(f"\n[Fast2SMS EXCEPTION]: {e}\n")
 
     # 3. Try 2Factor.in if configured
@@ -296,19 +314,23 @@ def send_mobile_otp(phone_number):
                 resp_data = json.loads(resp.read().decode('utf-8'))
                 if resp_data.get('Status') == 'Success':
                     print(f"\n[REAL-TIME SMS DELIVERED] 2Factor sent OTP {otp} to mobile: +91 {ten_digit}\n")
-                    return [True, otp, False]
+                    return [True, otp, False, None]
                 else:
+                    last_gateway_error = f"2Factor: {resp_data.get('Details', resp_data)}"
                     logger.warning(f"2Factor API error: {resp_data}")
         except Exception as e:
+            last_gateway_error = f"2Factor error: {e}"
             logger.warning(f"2Factor delivery to {clean_phone} failed: {e}. Falling back...")
 
-    # 3. Seamless Demo Mode Fallback (Zero Setup Needed for College Presentations/Viva)
+    # 4. Seamless Demo Mode Fallback (Zero Setup Needed for College Presentations/Viva)
     print(f"\n{'='*65}\n[DEMO MODE: MOBILE SMS OTP GENERATED FOR: {phone_number}]")
     print(f"OTP Code: {otp}")
     print(f"SMS Message: \"{message_body}\"")
+    if last_gateway_error:
+        print(f"Gateway Notice: {last_gateway_error}")
     print(f"To receive live SMS on mobile phones, configure TWILIO_ACCOUNT_SID or FAST2SMS_API_KEY in .env")
     print(f"{'='*65}\n")
-    return [True, otp, True]
+    return [True, otp, True, last_gateway_error]
 
 def send_email_otp(email_to):
     """

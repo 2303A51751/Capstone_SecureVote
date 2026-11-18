@@ -60,6 +60,8 @@ def main():
     else:
         print(f"\n⚠️ System operated in Demo Mode.")
         print(f"Generated OTP: {res[1]}")
+        if len(res) > 3 and res[3]:
+            print(f"\n❌ GATEWAY ERROR MESSAGE:\n   {res[3]}")
 
 if __name__ == '__main__':
     main()

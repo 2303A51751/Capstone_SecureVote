@@ -186,6 +186,7 @@ def send_otp(request):
         otp_res = send_mobile_otp(phone_input)
         success, otp_code = otp_res[0], otp_res[1]
         is_demo = otp_res[2] if len(otp_res) > 2 else False
+        gateway_err = otp_res[3] if len(otp_res) > 3 else None
 
         formatted_destination = f"+91 {phone_input}" if not phone_input.startswith('+') else phone_input
         res = {'success': success, 'auth_method': 'mobile'}
@@ -200,7 +201,11 @@ def send_otp(request):
             res['demo_mode'] = is_demo
             if is_demo:
                 res['otp'] = str(otp_code)
-                res['message'] = f'[Demo Mode] Mobile SMS OTP is: {otp_code} (Auto-filled).'
+                res['gateway_error'] = gateway_err
+                if gateway_err:
+                    res['message'] = f'[Demo Mode - {gateway_err}] OTP auto-filled: {otp_code}.'
+                else:
+                    res['message'] = f'[Demo Mode] Mobile SMS OTP is: {otp_code} (Auto-filled).'
             else:
                 res['message'] = f'SMS OTP dispatched to registered mobile: {formatted_destination}.'
         else:
