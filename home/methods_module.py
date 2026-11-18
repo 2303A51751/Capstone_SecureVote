@@ -274,10 +274,33 @@ def send_mobile_otp(phone_number):
                 method='POST'
             )
             with urllib.request.urlopen(req, timeout=10) as resp:
-                print(f"\n[REAL-TIME SMS DELIVERED] Fast2SMS sent OTP to mobile: {ten_digit}\n")
-                return [True, otp, False]
+                resp_data = json.loads(resp.read().decode('utf-8'))
+                if resp_data.get('return'):
+                    print(f"\n[REAL-TIME SMS DELIVERED] Fast2SMS sent OTP {otp} to mobile: +91 {ten_digit}\n")
+                    return [True, otp, False]
+                else:
+                    logger.warning(f"Fast2SMS API error: {resp_data}")
+                    print(f"\n[Fast2SMS ERROR]: {resp_data}\n")
         except Exception as e:
             logger.warning(f"Fast2SMS delivery to {clean_phone} failed: {e}. Falling back...")
+            print(f"\n[Fast2SMS EXCEPTION]: {e}\n")
+
+    # 3. Try 2Factor.in if configured
+    twofactor_key = getattr(settings, 'TWOFACTOR_API_KEY', '').strip()
+    if twofactor_key:
+        try:
+            ten_digit = clean_phone[-10:] if len(clean_phone) >= 10 else clean_phone
+            twofactor_url = f"https://2factor.in/API/V1/{twofactor_key}/SMS/{ten_digit}/{otp}/AUTOGEN"
+            req = urllib.request.Request(twofactor_url, headers={'User-Agent': 'SecureVote/1.0'})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                resp_data = json.loads(resp.read().decode('utf-8'))
+                if resp_data.get('Status') == 'Success':
+                    print(f"\n[REAL-TIME SMS DELIVERED] 2Factor sent OTP {otp} to mobile: +91 {ten_digit}\n")
+                    return [True, otp, False]
+                else:
+                    logger.warning(f"2Factor API error: {resp_data}")
+        except Exception as e:
+            logger.warning(f"2Factor delivery to {clean_phone} failed: {e}. Falling back...")
 
     # 3. Seamless Demo Mode Fallback (Zero Setup Needed for College Presentations/Viva)
     print(f"\n{'='*65}\n[DEMO MODE: MOBILE SMS OTP GENERATED FOR: {phone_number}]")
