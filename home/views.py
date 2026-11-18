@@ -684,7 +684,7 @@ def dummy_data_input(to_do):
             'pincode': '506371',
             'region': 'Hanamkonda',
             'email': '2303a51767@sru.edu.in',
-            'phone': '9849012347'
+            'phone': '8341519039'
         },
         {
             'uuid': '652196177770',
@@ -693,7 +693,7 @@ def dummy_data_input(to_do):
             'pincode': '503321',
             'region': 'Nizamabad',
             'email': '2303a51751@sru.edu.in',
-            'phone': '9849012348'
+            'phone': '6302559916'
         },
     ]
 
