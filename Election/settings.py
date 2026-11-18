@@ -151,6 +151,13 @@ DEMO_MODE = os.environ.get('DEMO_MODE', 'True').lower() in ('true', '1', 'yes')
 BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '').strip()
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '').strip()
 
+# Mobile SMS OTP Configuration (Twilio / Fast2SMS)
+# If left empty, system operates in seamless Demo Mode (auto-fills OTP for testing & evaluation)
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '').strip()
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '').strip()
+TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER', '').strip()
+FAST2SMS_API_KEY = os.environ.get('FAST2SMS_API_KEY', '').strip()
+
 # Blockchain Configuration
 TRANSACTIONS_PER_BLOCK = int(os.environ.get('TRANSACTIONS_PER_BLOCK', 1))
 

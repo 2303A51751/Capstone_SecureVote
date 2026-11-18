@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 
 from .models import Voters, PoliticalParty, Vote, VoteBackup, Block, MiningInfo
 from .methods_module import (
+    send_mobile_otp,
     send_email_otp,
     generate_keys,
     verify_vote,
@@ -129,55 +130,88 @@ def reset_voter(request):
             return JsonResponse({'success': True, 'message': f'Voter {voter.name} is now reset and ready to vote!'})
     return JsonResponse({'success': False, 'error': 'Voter not found'})
 
-# --------- Send otp for email verification -----------
+# --------- Send OTP for Voter Verification (Mobile SMS or Email) -----------
 @csrf_exempt
 def send_otp(request):
     """
-    Generates and sends an OTP strictly to the voter's registered email address.
-    In Demo Mode, outputs OTP in response/console for seamless offline testing.
+    Generates and sends an OTP:
+    - Primary option: Mobile Number SMS OTP (Twilio / Fast2SMS / Demo fallback)
+    - Extra / Alternative option: Email OTP (Brevo / SMTP / Demo fallback)
     """
     uuid = request.session.get('uuid')
-    email_input = None
-    if uuid:
-        voter = Voters.objects.filter(uuid=uuid).first()
-        if voter and voter.email:
+    voter = Voters.objects.filter(uuid=uuid).first() if uuid else None
+
+    auth_method = (request.POST.get('auth_method') or request.GET.get('auth_method') or 'mobile').strip().lower()
+
+    if auth_method == 'email':
+        email_input = (request.POST.get('email-id') or request.GET.get('email-id') or '').strip()
+        if not email_input and voter and voter.email:
             email_input = voter.email
 
-    if not email_input:
-        email_input = request.POST.get('email-id') or request.GET.get('email-id')
-        if email_input:
-            email_input = email_input.strip()
+        if not email_input:
+            return JsonResponse({'success': False, 'error': 'No registered email found for this voter.'})
 
-    if not email_input:
-        return JsonResponse({'success': False, 'error': 'No registered email found for this voter.'})
+        otp_res = send_email_otp(email_input)
+        success, otp_code = otp_res[0], otp_res[1]
+        is_demo = otp_res[2] if len(otp_res) > 2 else False
 
-    otp_res = send_email_otp(email_input)
-    success = otp_res[0]
-    otp_code = otp_res[1]
-    is_demo = otp_res[2] if len(otp_res) > 2 else False
-
-    res = {'success': success}
-    if success:
-        request.session['otp'] = str(otp_code)
-        request.session['email-id'] = email_input
-        request.session['email-verified'] = False
-        res['email'] = email_input
-        res['demo_mode'] = is_demo
-        if is_demo:
-            res['otp'] = str(otp_code)
-            res['message'] = f'[Demo Mode] OTP is: {otp_code} (Auto-filled). Configure EMAIL_ADDRESS in .env for live inbox delivery.'
+        res = {'success': success, 'auth_method': 'email'}
+        if success:
+            request.session['otp'] = str(otp_code)
+            request.session['email-id'] = email_input
+            request.session['auth-method'] = 'email'
+            request.session['auth-verified'] = False
+            request.session['email-verified'] = False
+            res['email'] = email_input
+            res['destination'] = email_input
+            res['demo_mode'] = is_demo
+            if is_demo:
+                res['otp'] = str(otp_code)
+                res['message'] = f'[Demo Mode] Email OTP is: {otp_code} (Auto-filled).'
+            else:
+                res['message'] = f'OTP sent successfully to registered inbox: {email_input}. Please check your email.'
         else:
-            res['message'] = f'OTP sent successfully to your registered inbox: {email_input}. Please check your email.'
+            res['error'] = str(otp_code)
+        return JsonResponse(res)
+
     else:
-        res['error'] = str(otp_code)
+        # Primary: Mobile Number SMS OTP
+        phone_input = (request.POST.get('phone') or request.GET.get('phone') or '').strip()
+        if not phone_input and voter and voter.phone:
+            phone_input = voter.phone
 
-    return JsonResponse(res)
+        if not phone_input:
+            phone_input = '9849012345'
 
-# -------- Verify email with provided otp ----------
+        otp_res = send_mobile_otp(phone_input)
+        success, otp_code = otp_res[0], otp_res[1]
+        is_demo = otp_res[2] if len(otp_res) > 2 else False
+
+        formatted_destination = f"+91 {phone_input}" if not phone_input.startswith('+') else phone_input
+        res = {'success': success, 'auth_method': 'mobile'}
+        if success:
+            request.session['otp'] = str(otp_code)
+            request.session['phone'] = phone_input
+            request.session['auth-method'] = 'mobile'
+            request.session['auth-verified'] = False
+            request.session['email-verified'] = False
+            res['phone'] = phone_input
+            res['destination'] = formatted_destination
+            res['demo_mode'] = is_demo
+            if is_demo:
+                res['otp'] = str(otp_code)
+                res['message'] = f'[Demo Mode] Mobile SMS OTP is: {otp_code} (Auto-filled).'
+            else:
+                res['message'] = f'SMS OTP dispatched to registered mobile: {formatted_destination}.'
+        else:
+            res['error'] = str(otp_code)
+        return JsonResponse(res)
+
+# -------- Verify voter with provided OTP ----------
 @csrf_exempt
 def verify_otp(request):
     """
-    Verifies the OTP submitted by the voter.
+    Verifies the OTP submitted by the voter (mobile or email).
     """
     otp_input = request.POST.get('otp-input') or request.GET.get('otp-input')
     if otp_input:
@@ -191,16 +225,21 @@ def verify_otp(request):
         if uuid:
             voter = Voters.objects.filter(uuid=uuid).first()
             if voter:
-                voter.email = request.session.get('email-id', '')
+                if request.session.get('phone'):
+                    voter.phone = request.session.get('phone')
+                if request.session.get('email-id'):
+                    voter.email = request.session.get('email-id')
                 voter.save()
         res['success'] = True
+        res['auth_method'] = request.session.get('auth-method', 'mobile')
+        request.session['auth-verified'] = True
         request.session['email-verified'] = True
     else:
         res['error'] = 'Invalid OTP. Please enter the correct verification code.'
 
     return JsonResponse(res)
 
-# --------- On successful email verification show all parties options ----------
+# --------- On successful verification show all parties options ----------
 @csrf_exempt
 def get_parties(request):
     """
@@ -208,14 +247,19 @@ def get_parties(request):
     sends private key, and renders the voting ballot page.
     """
     party_list = {}
-    if request.session.get('email-verified'):
+    if request.session.get('auth-verified') or request.session.get('email-verified'):
         private_key, public_key = generate_keys()
 
         # Store keys in session
         request.session['public-key'] = public_key
         request.session['private-key'] = private_key
 
-        email_id = request.session.get('email-id', 'demo@voter.org')
+        email_id = request.session.get('email-id', '')
+        if not email_id:
+            uuid = request.session.get('uuid')
+            voter = Voters.objects.filter(uuid=uuid).first() if uuid else None
+            email_id = voter.email if voter and voter.email else 'demo@voter.org'
+
         send_email_private_key(email_id, private_key)
 
         parties = list(PoliticalParty.objects.all())
@@ -621,7 +665,8 @@ def dummy_data_input(to_do):
             'dob': datetime.date(2005, 2, 2),
             'pincode': '506321',
             'region': 'Hanamkonda',
-            'email': '2303a51770@sru.edu.in'
+            'email': '2303a51770@sru.edu.in',
+            'phone': '9849012345'
         },
         {
             'uuid': '319793558085',
@@ -629,7 +674,8 @@ def dummy_data_input(to_do):
             'dob': datetime.date(2004, 3, 3),
             'pincode': '506371',
             'region': 'Hanamkonda',
-            'email': '2303a51762@sru.edu.in'
+            'email': '2303a51762@sru.edu.in',
+            'phone': '9849012346'
         },
         {
             'uuid': '416710509637',
@@ -637,7 +683,8 @@ def dummy_data_input(to_do):
             'dob': datetime.date(2006, 4, 4),
             'pincode': '506371',
             'region': 'Hanamkonda',
-            'email': '2303a51767@sru.edu.in'
+            'email': '2303a51767@sru.edu.in',
+            'phone': '9849012347'
         },
         {
             'uuid': '652196177770',
@@ -645,7 +692,8 @@ def dummy_data_input(to_do):
             'dob': datetime.date(2006, 4, 26),
             'pincode': '503321',
             'region': 'Nizamabad',
-            'email': '2303a51751@sru.edu.in'
+            'email': '2303a51751@sru.edu.in',
+            'phone': '9849012348'
         },
     ]
 
@@ -659,6 +707,7 @@ def dummy_data_input(to_do):
                 pincode=v['pincode'],
                 region=v['region'],
                 email=v['email'],
+                phone=v['phone'],
                 profile_pic='/static/images/profile-bg.png',
                 vote_done=False
             )
@@ -818,8 +867,8 @@ def get_sample_voters(request):
     API endpoint returning sample ready-to-vote and already-voted citizens
     for instant one-click testing on the homepage.
     """
-    unvoted = list(Voters.objects.filter(vote_done=False).values('uuid', 'name', 'region', 'email'))
-    voted = list(Voters.objects.filter(vote_done=True).values('uuid', 'name', 'region', 'email'))
+    unvoted = list(Voters.objects.filter(vote_done=False).values('uuid', 'name', 'region', 'email', 'phone'))
+    voted = list(Voters.objects.filter(vote_done=True).values('uuid', 'name', 'region', 'email', 'phone'))
     return JsonResponse({
         'unvoted': unvoted,
         'voted': voted,

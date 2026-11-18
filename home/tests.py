@@ -86,6 +86,7 @@ class VotingWorkflowTests(TestCase):
             pincode="506321",
             region="Hanamkonda",
             email="2303a51770@sru.edu.in",
+            phone="9849012345",
             vote_done=False
         )
         self.party = PoliticalParty.objects.create(
@@ -109,19 +110,40 @@ class VotingWorkflowTests(TestCase):
         self.assertFalse(data['success'])
         self.assertIn('No voter found', data['error'])
 
-    def test_otp_flow(self):
+    def test_mobile_otp_flow(self):
         session = self.client.session
         session['uuid'] = self.voter.uuid
         session.save()
 
-        # Send OTP
-        resp = self.client.post('/send-otp/', {'email-id': '2303a51770@sru.edu.in'})
+        # Send Mobile OTP (Primary verification)
+        resp = self.client.post('/send-otp/', {'auth_method': 'mobile', 'phone': '9849012345'})
         data = resp.json()
         self.assertTrue(data['success'])
+        self.assertEqual(data['auth_method'], 'mobile')
+        self.assertIn('9849012345', data['destination'])
         otp = data.get('otp')
         self.assertIsNotNone(otp)
 
-        # Verify OTP
+        # Verify Mobile OTP
+        resp_verify = self.client.post('/verify-otp/', {'otp-input': otp})
+        verify_data = resp_verify.json()
+        self.assertTrue(verify_data['success'])
+        self.assertEqual(verify_data['auth_method'], 'mobile')
+
+    def test_email_otp_flow(self):
+        session = self.client.session
+        session['uuid'] = self.voter.uuid
+        session.save()
+
+        # Send Email OTP (Alternative extra option)
+        resp = self.client.post('/send-otp/', {'auth_method': 'email', 'email-id': '2303a51770@sru.edu.in'})
+        data = resp.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['auth_method'], 'email')
+        otp = data.get('otp')
+        self.assertIsNotNone(otp)
+
+        # Verify Email OTP
         resp_verify = self.client.post('/verify-otp/', {'otp-input': otp})
         self.assertTrue(resp_verify.json()['success'])
 

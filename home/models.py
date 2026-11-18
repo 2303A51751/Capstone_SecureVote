@@ -8,6 +8,7 @@ class Voters(models.Model):
     region = models.CharField(max_length=100)
     profile_pic = models.CharField(max_length=500, blank=True)
     email = models.CharField(max_length=100, blank=True)
+    phone = models.CharField(max_length=20, blank=True, default='')
     vote_done = models.BooleanField(default=False)
 
     class Meta:

@@ -1,7 +1,9 @@
 import smtplib
 import urllib.request
+import urllib.parse
 import urllib.error
 import json
+import base64
 from email.message import EmailMessage
 from django.conf import settings
 from django.utils import timezone
@@ -209,6 +211,81 @@ def _has_email_service():
 def _get_sender_address():
     sender = getattr(settings, 'EMAIL_ADDRESS', '').strip()
     return sender if sender else 'e-voting@securevote.org'
+
+def send_mobile_otp(phone_number):
+    """
+    Sends a 6-digit verification OTP to the voter's registered mobile number via SMS.
+    Supports:
+      1. Twilio SMS API (HTTPS REST - Port 443)
+      2. Fast2SMS API (Indian Mobile Numbers)
+      3. Seamless Demo Mode Fallback (if no API keys configured or connection fails)
+    Returns: [success (bool), otp_code (str), is_demo (bool)]
+    """
+    clean_phone = str(phone_number).strip().replace(' ', '').replace('-', '')
+    otp = ''.join(random.choice(string.digits) for _ in range(6))
+    message_body = f"SecureVote Blockchain: Your voter authentication OTP is {otp}. Valid for current voting session. Do not share."
+
+    twilio_sid = getattr(settings, 'TWILIO_ACCOUNT_SID', '').strip()
+    twilio_token = getattr(settings, 'TWILIO_AUTH_TOKEN', '').strip()
+    twilio_from = getattr(settings, 'TWILIO_PHONE_NUMBER', '').strip()
+    fast2sms_key = getattr(settings, 'FAST2SMS_API_KEY', '').strip()
+
+    # 1. Try Twilio if configured
+    if twilio_sid and twilio_token and twilio_from:
+        try:
+            target_phone = clean_phone if clean_phone.startswith('+') else f"+91{clean_phone}"
+            twilio_url = f"https://api.twilio.com/2010-04-01/Accounts/{twilio_sid}/Messages.json"
+            post_data = urllib.parse.urlencode({
+                'To': target_phone,
+                'From': twilio_from,
+                'Body': message_body
+            }).encode('utf-8')
+
+            auth_header = 'Basic ' + base64.b64encode(f"{twilio_sid}:{twilio_token}".encode('utf-8')).decode('utf-8')
+            req = urllib.request.Request(
+                twilio_url,
+                data=post_data,
+                headers={'Authorization': auth_header, 'Content-Type': 'application/x-www-form-urlencoded'},
+                method='POST'
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                print(f"\n[REAL-TIME SMS DELIVERED] Twilio sent OTP to mobile: {target_phone}\n")
+                return [True, otp, False]
+        except Exception as e:
+            logger.warning(f"Twilio SMS delivery to {clean_phone} failed: {e}. Falling back...")
+
+    # 2. Try Fast2SMS if configured (popular for Indian 10-digit mobile numbers)
+    if fast2sms_key:
+        try:
+            ten_digit = clean_phone[-10:] if len(clean_phone) >= 10 else clean_phone
+            fast2sms_url = "https://www.fast2sms.com/dev/bulkV2"
+            payload = json.dumps({
+                "route": "otp",
+                "variables_values": otp,
+                "numbers": ten_digit
+            }).encode('utf-8')
+            req = urllib.request.Request(
+                fast2sms_url,
+                data=payload,
+                headers={
+                    'authorization': fast2sms_key,
+                    'Content-Type': 'application/json'
+                },
+                method='POST'
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                print(f"\n[REAL-TIME SMS DELIVERED] Fast2SMS sent OTP to mobile: {ten_digit}\n")
+                return [True, otp, False]
+        except Exception as e:
+            logger.warning(f"Fast2SMS delivery to {clean_phone} failed: {e}. Falling back...")
+
+    # 3. Seamless Demo Mode Fallback (Zero Setup Needed for College Presentations/Viva)
+    print(f"\n{'='*65}\n[DEMO MODE: MOBILE SMS OTP GENERATED FOR: {phone_number}]")
+    print(f"OTP Code: {otp}")
+    print(f"SMS Message: \"{message_body}\"")
+    print(f"To receive live SMS on mobile phones, configure TWILIO_ACCOUNT_SID or FAST2SMS_API_KEY in .env")
+    print(f"{'='*65}\n")
+    return [True, otp, True]
 
 def send_email_otp(email_to):
     """

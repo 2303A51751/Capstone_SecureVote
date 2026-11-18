@@ -63,18 +63,20 @@ function loadSampleVoters() {
             if (data.unvoted && data.unvoted.length > 0) {
                 var readyHtml = '';
                 for (var v of data.unvoted) {
-                    var emailTag = v.email ? ' • ' + v.email : '';
+                    var phoneTag = v.phone ? ' • 📱 +91 ' + v.phone : '';
+                    var emailTag = v.email ? ' • ✉️ ' + v.email : '';
                     readyHtml += '<span class="demo-chip ready" onclick="selectDemoVoter(\'' + v.uuid + '\')">' +
-                        '<strong>' + v.name + '</strong> (' + formatAadhaar(v.uuid) + ')' + emailTag + '</span>';
+                        '<strong>' + v.name + '</strong> (' + formatAadhaar(v.uuid) + ')' + phoneTag + emailTag + '</span>';
                 }
                 $('#ready-voters').html(readyHtml);
             }
             if (data.voted && data.voted.length > 0) {
                 var votedHtml = '';
                 for (var v of data.voted) {
-                    var emailTag = v.email ? ' • ' + v.email : '';
-                    votedHtml += '<span class="demo-chip voted" onclick="selectDemoVoter(\'' + v.uuid + '\')">' +
-                        '<strong>' + v.name + '</strong> (' + formatAadhaar(v.uuid) + ')' + emailTag + ' - Voted</span>';
+                    var phoneTag = v.phone ? ' • 📱 +91 ' + v.phone : '';
+                    var emailTag = v.email ? ' • ✉️ ' + v.email : '';
+                    readyHtml += '<span class="demo-chip voted" onclick="selectDemoVoter(\'' + v.uuid + '\')">' +
+                        '<strong>' + v.name + '</strong> (' + formatAadhaar(v.uuid) + ')' + phoneTag + emailTag + ' - Voted</span>';
                 }
                 $('#voted-voters').html(votedHtml);
                 $('#voted-group').show();

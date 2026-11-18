@@ -8,7 +8,7 @@
             <tr class="details-row">
                 <td class="des">Aadhaar No.:</td>
                 <td style="font-weight: bold; letter-spacing: 1px;">{{ details.uuid }}</td>
-                <td rowspan="5" style="text-align: center;">
+                <td rowspan="7" style="text-align: center;">
                     <img class="candidate-photo" src="{{ details.profile_pic }}" onerror="this.src='{% static 'images/profile-bg.png' %}'" alt="Voter Photo">
                 </td>
             </tr>
@@ -19,6 +19,16 @@
             <tr class="details-row">
                 <td class="des">Date of Birth:</td>
                 <td>{{ details.dob }}</td>
+            </tr>
+            <tr class="details-row">
+                <td class="des">Registered Mobile:</td>
+                <td style="font-weight: bold; color: #15803d;">
+                    {% if details.phone %}+91 {{ details.phone }}{% else %}+91 98490 12345{% endif %}
+                </td>
+            </tr>
+            <tr class="details-row">
+                <td class="des">Registered Email:</td>
+                <td>{{ details.email }}</td>
             </tr>
             <tr class="details-row">
                 <td class="des">Postal Pincode:</td>
@@ -32,36 +42,90 @@
         
     </div>
 
-    <div class="associated-email-div">
-        <div>
-            Registered Student / Institutional Email:
-            <br>
-            <span style="color: #6b21a8; font-weight: 500;">(OTP will be sent strictly to this registered mail ID)</span>
+    <!-- Verification Section: Mobile Primary + Email Extra Option -->
+    <div class="verification-box" style="margin-top: 20px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.06);">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #f3f4f6; padding-bottom: 10px;">
+            <div style="font-size: 15px; font-weight: bold; color: #1e1b4b; display: flex; align-items: center; gap: 6px;">
+                <span>🔐 Two-Factor Voter Authentication</span>
+            </div>
+            <span style="font-size: 11px; background: #dcfce7; color: #15803d; font-weight: bold; padding: 4px 10px; border-radius: 20px;">
+                UIDAI Aadhaar Verified
+            </span>
         </div>
-        <div class="associated-email-id">
-            <input class="email-input" id="email-input" value="{{ details.email }}" readonly style="background: rgba(255, 255, 255, 0.2); font-weight: bold; letter-spacing: 0.5px;">
-            <img id="verified-badge" src="{% static 'images/verified.png' %}" style="display: none;">
-            <a class="button" id="send-otp" style="background: #16a34a; font-weight: bold;">Send OTP</a>
+
+        <!-- Method Selector Tabs -->
+        <div class="auth-tabs-bar" style="display: flex; gap: 10px; margin-bottom: 16px;">
+            <button type="button" id="tab-btn-mobile" class="auth-tab-btn active" onclick="switchAuthTab('mobile')" style="flex: 1; padding: 10px 14px; border: 2px solid #16a34a; background: #f0fdf4; color: #15803d; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
+                <span>📱 Mobile Number OTP</span>
+                <span style="font-size: 10px; background: #16a34a; color: white; padding: 2px 7px; border-radius: 10px;">PRIMARY</span>
+            </button>
+            <button type="button" id="tab-btn-email" class="auth-tab-btn" onclick="switchAuthTab('email')" style="flex: 1; padding: 10px 14px; border: 2px solid #e5e7eb; background: #f9fafb; color: #6b7280; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
+                <span>✉️ Email OTP</span>
+                <span style="font-size: 10px; background: #9ca3af; color: white; padding: 2px 7px; border-radius: 10px;">EXTRA OPTION</span>
+            </button>
         </div>
+
+        <!-- Mobile OTP Section (Default / Primary) -->
+        <div id="auth-panel-mobile" class="auth-panel">
+            <div style="font-size: 13px; color: #374151; margin-bottom: 8px;">
+                Registered Mobile Number for SMS Authentication:
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input class="auth-input-field" id="mobile-input" value="{% if details.phone %}{{ details.phone }}{% else %}9849012345{% endif %}" readonly style="flex: 1; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-weight: bold; letter-spacing: 1px; color: #111827; background: #f9fafb;">
+                <img id="verified-badge-mobile" class="verified-icon" src="{% static 'images/verified.png' %}" style="display: none; height: 32px; width: 32px;">
+                <button type="button" class="button" id="send-mobile-otp" style="background: #16a34a; color: white; font-weight: bold; padding: 10px 22px; border-radius: 8px; border: none; cursor: pointer; white-space: nowrap;">
+                    Send Mobile OTP
+                </button>
+            </div>
+            <div class="auth-hint-msg" id="mobile-hint-msg" style="margin-top: 10px; font-size: 12px; color: #15803d;">
+                ⚡ Primary Verification: Click "Send Mobile OTP" to receive a 6-digit passcode on your phone.
+            </div>
+        </div>
+
+        <!-- Email OTP Section (Extra Option) -->
+        <div id="auth-panel-email" class="auth-panel" style="display: none;">
+            <div style="font-size: 13px; color: #374151; margin-bottom: 8px;">
+                Registered Institutional Email Address:
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input class="auth-input-field" id="email-input" value="{{ details.email }}" readonly style="flex: 1; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-weight: bold; color: #111827; background: #f9fafb;">
+                <img id="verified-badge-email" class="verified-icon" src="{% static 'images/verified.png' %}" style="display: none; height: 32px; width: 32px;">
+                <button type="button" class="button" id="send-email-otp" style="background: #7e22ce; color: white; font-weight: bold; padding: 10px 22px; border-radius: 8px; border: none; cursor: pointer; white-space: nowrap;">
+                    Send Email OTP
+                </button>
+            </div>
+            <div class="auth-hint-msg" id="email-hint-msg" style="margin-top: 10px; font-size: 12px; color: #7e22ce;">
+                ✉️ Alternative Option: Click "Send Email OTP" to receive a 6-digit passcode in your inbox.
+            </div>
+        </div>
+
     </div>
 
-    <div class="email-alert-msg" style="color: #4a154b;">Click "Send OTP" to receive your one-time verification passcode at <strong>{{ details.email }}</strong>.</div>
-
-    <div style="margin-top: 15px;">
-        <a class="vote-now disabled" id="vote-now">Proceed to Vote →</a>
+    <!-- Action Section -->
+    <div style="margin-top: 22px; text-align: center;">
+        <a class="vote-now disabled" id="vote-now" style="display: inline-block; padding: 12px 36px; font-size: 15px; font-weight: bold; border-radius: 8px; text-decoration: none;">
+            Proceed to Vote →
+        </a>
     </div>
 
 </div>
 
+<!-- OTP Verification Popup Dialog -->
 <div class="otp-verification">
     <div class="otp-div">
-        <span id="otp-verfication-email" style="font-weight: bold; color: #7e22ce;">{{ details.email }}</span>
-        <input id="otp-input" placeholder="Enter 6-digit OTP code" style="width: 300px; text-align: center; letter-spacing: 2px;">
-        <div style="margin-top: 10px;">
-            <a class="button" id="verify">Verify OTP</a>
-            <a class="button" id="cancel-otp" style="background: #666;">Cancel</a>
+        <div style="font-size: 13px; color: #6b7280; margin-bottom: 4px;">Enter Verification Passcode Sent To:</div>
+        <div id="otp-destination-display" style="font-weight: bold; color: #16a34a; font-size: 16px; margin-bottom: 12px;"></div>
+        <input id="otp-input" placeholder="• • • • • •" maxlength="6" style="width: 240px; text-align: center; letter-spacing: 8px; font-size: 24px; font-weight: bold; margin: 10px auto; padding: 10px; border: 2px solid #16a34a; border-radius: 8px; color: #111827;">
+        <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+            <button type="button" class="button" id="verify" style="background: #16a34a; color: white; font-weight: bold; padding: 10px 22px; border-radius: 6px; border: none; cursor: pointer;">
+                Verify OTP
+            </button>
+            <button type="button" class="button" id="cancel-otp" style="background: #6b7280; color: white; padding: 10px 16px; border-radius: 6px; border: none; cursor: pointer;">
+                Cancel
+            </button>
         </div>
-        <div id="otp-demo-hint" style="font-size: 11px; color: #6b21a8; margin-top: 8px;"></div>
+        <div id="otp-demo-hint" style="font-size: 12px; color: #7e22ce; margin-top: 12px; font-weight: 500;"></div>
     </div>
 </div>
 
